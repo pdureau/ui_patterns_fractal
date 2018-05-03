@@ -1,0 +1,16 @@
+{
+  "name": "drupal/ui_patterns_fractal",
+  "description": " UI Patterns Fractal.",
+  "keywords": ["drupal", "web", "ui"],
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "drupal/ui_patterns": "^1.0@RC"
+  },
+  "autoload": {
+    "psr-4": {
+      "Drupal\\ui_patterns\\": "src",
+      "Drupal\\Tests\\ui_patterns\\": "tests/src"
+    }
+  }
+}

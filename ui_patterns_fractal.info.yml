@@ -4,5 +4,5 @@ description: Integration of Fractal patterns as UI Patterns plugins
 core: 8.x
 package: User interface
 dependencies:
-  - drupal:ui_patterns
-  - drupal:ui_patterns_library
+  - ui_patterns:ui_patterns
+  - ui_patterns:ui_patterns_library
