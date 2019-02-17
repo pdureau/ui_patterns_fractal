@@ -4,6 +4,7 @@ namespace Drupal\ui_patterns_fractal\Plugin\Deriver;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Component\Serialization\Json;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\ui_patterns_library\Plugin\Deriver\LibraryDeriver;
 
 /**
@@ -12,6 +13,8 @@ use Drupal\ui_patterns_library\Plugin\Deriver\LibraryDeriver;
  * @package Drupal\ui_patterns_fractal\Deriver
  */
 class FractalDeriver extends LibraryDeriver {
+
+  use StringTranslationTrait;
 
   /**
    * {@inheritdoc}
@@ -71,17 +74,18 @@ class FractalDeriver extends LibraryDeriver {
         $definition['provider'] = $provider;
 
         // Set other pattern values.
-        # The label is typically displayed in any UI navigation items that
-        # refer to the component. Defaults to a title-cased version of the
-        # component name if not specified.
+        // The label is typically displayed in any UI navigation items that
+        // refer to the component. Defaults to a title-cased version of the
+        // component name if not specified.
         $label = isset($content['label']) ? $content['label'] : ucwords(urldecode($id));
-        # The title of a component is typically what is displayed at the top
-        # of any pages related to the component. Defaults to the same as the
-        # label if not specified.
+        // The title of a component is typically what is displayed at the top
+        // of any pages related to the component. Defaults to the same as the
+        // label if not specified.
         $definition['label'] = isset($content['title']) ? $content['title'] : $label;
         $definition['description'] = $this->getDescription($content, $absolute_base_path);
-        # An array of tags to add to the component.
-        # Can be used by plugins and tasks to filter components.
+        $definition['variants'] = $this->getVariants($content);
+        // An array of tags to add to the component.
+        // Can be used by plugins and tasks to filter components.
         $definition['tags'] = isset($content['tags']) ? $content['tags'] : [];
         $definition['fields'] = $this->getFields($content);
         $definition['libraries'] = $this->getLibraries($id, $absolute_base_path);
@@ -96,6 +100,57 @@ class FractalDeriver extends LibraryDeriver {
       }
     }
     return $patterns;
+  }
+
+  /**
+   *
+   */
+  private function getVariants($content) {
+
+    if (!isset($content['variants']) || empty($content['variants'])) {
+      return [];
+    }
+
+    // If you don't want to use the name 'default', you can specify the name of
+    // the variant to be used as the default variant by using the default property
+    // within the component's configuration.
+    // https://fractal.build/guide/components/variants#the-default-variant
+    $default_variant_key = isset($content['default']) ? $content['default'] : 'default';
+    $variants = [
+      $default_variant_key => [
+        'label' => $default_variant_key,
+      ],
+    ];
+    foreach ($content['variants'] as $variant) {
+      $key = $variant['name'];
+      $description = [];
+      $variants[$key] = [
+        'label' => isset($variant['label']) ? $variant['label'] : $key,
+      ];
+
+      // No variant description in Fractal. No variant status in UI Patterns.
+      // So, let's associate both.
+      $status = isset($variant['status']) ? $variant['status'] : NULL;
+      $description[] = $status ? $this->t('Status: @status.', ['@status' => $status]) : '';
+
+      // This module README tell the user to add a variant field with the
+      // variant machine name as value in Fractal. We d'ont use it in UI
+      // Patterns.
+      if (isset($variant['context']) && !empty($variant['context'])) {
+        unset($variant['context']['variant']);
+      }
+
+      if (isset($variant['context']) && !empty($variant['context'])) {
+        // In Fractal, variants can have specific fields & values.
+        // In UI Patterns, they can't. Let's tell the user about that.
+        $fields = array_keys($variant['context']);
+        $description[] = $this->t('Some Fractal fields are ignored: @fields.', ['@fields' => implode(',', $fields)]);
+      }
+    }
+
+    $variants[$key]['description'] = implode(' ', $description);
+
+    return $variants;
   }
 
   /**
