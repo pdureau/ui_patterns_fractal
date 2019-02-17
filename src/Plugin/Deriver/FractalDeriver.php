@@ -195,19 +195,30 @@ class FractalDeriver extends LibraryDeriver {
    *
    */
   private function getDescription($content, $base_path) {
+    $description = '';
     // Any notes set here override content taken from the component’s README.md
     // file, if there is one. Accepts markdown.
     // https://fractal.build/guide/components/notes
     if (array_key_exists("notes", $content)) {
-      // TODO: Markdown parsing.
-      return $content["notes"];
+      $description = $content["notes"];
     }
-    if (file_exists($base_path . "/README.md")) {
-      $md = file_get_contents($base_path . "/README.md");
-      // TODO: Markdown parsing.
-      return $md;
+    elseif (file_exists($base_path . "/README.md")) {
+      $description = file_get_contents($base_path . "/README.md");
     }
-    return "";
+
+    // We work with league/commonmark package because it is the one chosen by
+    // https://www.drupal.org/project/markdown
+    // TODO: Performance. Instanciate this object only once, instead of one for
+    // each patterns.
+    $converter = 'League\\CommonMark\\CommonMarkConverter';
+    if (class_exists($converter)) {
+      $converter = new $converter();
+      $description = $converter->convertToHtml($description);
+      // UI Patterns doesn't accept HTML in patterns descriptions.
+      $description = strip_tags($description);
+    }
+
+    return $description;
   }
 
   /**
