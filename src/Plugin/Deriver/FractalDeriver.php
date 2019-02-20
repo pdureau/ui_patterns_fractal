@@ -6,6 +6,7 @@ use Drupal\Component\Serialization\Yaml;
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\ui_patterns_library\Plugin\Deriver\LibraryDeriver;
+use Drupal\Core\Render\Element;
 
 /**
  * Class FractalDeriver.
@@ -125,7 +126,7 @@ class FractalDeriver extends LibraryDeriver {
       $key = $variant['name'];
       $description = [];
       $variants[$key] = [
-        'label' => isset($variant['label']) ? $variant['label'] : $key,
+        'label' => isset($variant['label']) ? $variant['label'] : ucwords(str_replace('_', ' ', $key)),
       ];
 
       // No variant description in Fractal. No variant status in UI Patterns.
@@ -133,8 +134,8 @@ class FractalDeriver extends LibraryDeriver {
       $status = isset($variant['status']) ? $variant['status'] : NULL;
       $description[] = $status ? $this->t('Status: @status.', ['@status' => $status]) : '';
 
-      // This module README tell the user to add a variant field with the
-      // variant machine name as value in Fractal. We d'ont use it in UI
+      // This module's README tell the user to add a variant field with the
+      // variant machine name as value in Fractal. We don't use it in UI
       // Patterns.
       if (isset($variant['context']) && !empty($variant['context'])) {
         unset($variant['context']['variant']);
@@ -146,9 +147,10 @@ class FractalDeriver extends LibraryDeriver {
         $fields = array_keys($variant['context']);
         $description[] = $this->t('Some Fractal fields are ignored: @fields.', ['@fields' => implode(',', $fields)]);
       }
-    }
 
-    $variants[$key]['description'] = implode(' ', $description);
+      $variants[$key]['description'] = implode(' ', $description);
+
+    }
 
     return $variants;
   }
@@ -161,9 +163,25 @@ class FractalDeriver extends LibraryDeriver {
     // The context data to pass to the template when rendering previews.
     $fields = [];
     foreach ($content['context'] as $field => $preview) {
+      // Fractal context fields has only a preview. No label, no type, no
+      // description. However, we can guess the type and some infos about the
+      // field.
+      $description = '';
+      $type = gettype($preview);
+      if ($type === 'string') {
+        $description = (filter_var($preview, FILTER_VALIDATE_URL) === $preview) ? $this->t('URL') : $description;
+        $description = (filter_var($preview, FILTER_VALIDATE_EMAIL) === $preview) ? $this->t('E-mail') : $description;
+        $description = ($preview !== strip_tags($preview)) ? $this->t('Markup') : $description;
+      }
+      if ($type === 'array') {
+        $description = count(Element::properties($preview)) ? $this->t('Render array') : $description;
+      }
       $fields[$field] = [
-        "label" => $field,
-        "preview" => $preview,
+        // Underscores are allowed for plugins names.
+        'label' => ucwords(str_replace('_', ' ', $field)),
+        'preview' => $preview,
+        'type' => $type,
+        'description' => $description,
       ];
     }
 
@@ -178,8 +196,8 @@ class FractalDeriver extends LibraryDeriver {
       if ($variant["name"] == $default) {
         foreach ($variant['context'] as $field => $preview) {
           $fields[$field] = [
-            "label" => $field,
-            "preview" => $preview,
+            'label' => ucwords(str_replace('_', ' ', $field)),
+            'preview' => $preview,
           ];
         }
       }
